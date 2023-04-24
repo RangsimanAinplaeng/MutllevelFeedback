@@ -14,11 +14,10 @@ public class Model {
     private int queue;
 
 
-
     public Model() {
     }
 
-    public Model(int processID, int index, int arrivalTime,int queue,int timeQuantum) {
+    public Model(int processID, int index, int arrivalTime, int queue, int timeQuantum) {
         this.processID = processID;
         this.arrivalTime = arrivalTime;
         this.index = index;
@@ -41,6 +40,7 @@ public class Model {
     public void setTimeQuantum(int timeQuantum) {
         this.timeQuantum = timeQuantum;
     }
+
     public String getStatus() {
         return status[index];
     }

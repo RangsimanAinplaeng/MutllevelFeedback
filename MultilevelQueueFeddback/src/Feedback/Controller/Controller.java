@@ -12,14 +12,12 @@ public class Controller {
     ArrayList<Model> queue2 = new ArrayList<Model>();
     ArrayList<Model> queue3 = new ArrayList<Model>();
     ArrayList<Model> cdQueue = new ArrayList<Model>();
-    int pId = 1;  //ProcessID กําหนดให้เริ่มต้นที่ ProcessID = 1
-    int timeQuantumQ1 = 0;
-    int timeQuantumQ2 = 0;
-    int burstTime = 0; //ค่า burstTime
-    int resetTimeQuantumQ1;
-    int resetTimeQuantumQ2;
-    int waitingTime = 0; // ใช้เก็บค่า WaitingTime
-    int ioTime = 0;  // ใช้ กำหนดช่วงเวลาทำงานของ IO
+    int pId = 1;
+    int timeQuantum = 0;
+    int burstTime = 0;
+    int resetTimeQuantum;
+    int waitingTime = 0;
+    int ioTime = 0;
     double avgWaitingTime = 0;
     double avgTurnaroundTime = 0;
 
@@ -27,26 +25,22 @@ public class Controller {
     }
 
     ////////////////////////////////////////addProcess////////////////////////////////////////////////////////////////////////////
-    //method ปุ่ม addProcess คือมี paramiter อยู่ 2 ตัว รับมาจากฝั่ง View คือตัวแปล clock timeQuantum Method นี้จะถูกนําไปเรียกใช้ในฝั่ง View
     public void addProcess(int clock, int timeQuantumQ1, int timeQuantumQ2) {
         model = new Model(pId, 0, clock, 1, timeQuantumQ1);
-        resetTimeQuantumQ2 = timeQuantumQ2;
+        resetTimeQuantum = timeQuantumQ2;
         pId++;
         jobQueue.add(model);
         queue1.add(model);
     }
-
-
     ////////////////////////////////////////process////////////////////////////////////////////////////////////////////////////
 
-    // Method roundRobinQueue จะทำการกำหนดค่าต่างๆ การทํางานต่างๆ ในกรณีที่เข้าไปใช้งาน CPU
     public void queue1() {
         try {
             for (int i = 0; i < jobQueue.size(); i++) {
                 if (queue1.get(0) == jobQueue.get(i)) {
-                    timeQuantumQ1 = jobQueue.get(i).getTimeQuantum();
-                    timeQuantumQ1--;
-                    jobQueue.get(i).setTimeQuantum(timeQuantumQ1);
+                    timeQuantum = jobQueue.get(i).getTimeQuantum();
+                    timeQuantum--;
+                    jobQueue.get(i).setTimeQuantum(timeQuantum);
 
                     burstTime = jobQueue.get(i).getBurstTime();
                     burstTime++;
@@ -55,7 +49,7 @@ public class Controller {
 
                     if (jobQueue.get(i).getTimeQuantum() == 0) {
                         jobQueue.get(i).setStatus(1);
-                        jobQueue.get(i).setTimeQuantum(resetTimeQuantumQ2);
+                        jobQueue.get(i).setTimeQuantum(resetTimeQuantum);
                         jobQueue.get(i).setQueue(jobQueue.get(i).getQueue() + 1);
                         queue2.add(jobQueue.get(i));
                         queue1.remove(0);
@@ -74,9 +68,9 @@ public class Controller {
         try {
             for (int i = 0; i < jobQueue.size(); i++) {
                 if (queue2.get(0) == jobQueue.get(i)) {
-                    timeQuantumQ2 = jobQueue.get(i).getTimeQuantum();
-                    timeQuantumQ2--;
-                    jobQueue.get(i).setTimeQuantum(timeQuantumQ2);
+                    timeQuantum = jobQueue.get(i).getTimeQuantum();
+                    timeQuantum--;
+                    jobQueue.get(i).setTimeQuantum(timeQuantum);
 
                     burstTime = jobQueue.get(i).getBurstTime();
                     burstTime++;
@@ -88,7 +82,6 @@ public class Controller {
                         jobQueue.get(i).setQueue(jobQueue.get(i).getQueue() + 1);
                         queue3.add(jobQueue.get(i));
                         queue2.remove(0);
-//                        jobQueue.get(i).setTimeQuantum(resetTimeQuantumQ2);
                     }
                 } else if (jobQueue.get(i).getStatus() != "Waiting") {
                     jobQueue.get(i).setStatus(1);
@@ -100,14 +93,13 @@ public class Controller {
     }
 
     public void queue3() {
-        //TODO firstComeFirstServed
         try {
-            for (int i = 0; i < jobQueue.size(); i++) { //Loop ถ้า i = 0 เช็คว่า i < jobQueue.size ก็จะเพื่มค่า i ครั้งละ 1
-                if (queue3.get(0) == jobQueue.get(i)) { // ถ้า firstComeFirstServedQueue ตําแหน่งที่ 0 เท่ากับ jobQueue ตําแหน่งที่ i
-                    jobQueue.get(i).setStatus(2); // ก็จะเซ็ตค่าเป็น Running
-                    burstTime = jobQueue.get(i).getBurstTime();   //โดย get ค่า jQ Process นั้นมา ให้มีค่าเท่ากับ burstTime
-                    burstTime++;  //และเพิ่มค่า jQ ขึ้นที่ละ 1
-                    jobQueue.get(i).setBurstTime(burstTime); //โดยนําค่า jQ มาเก็บยัง setBurstTime ของ Process นั้น
+            for (int i = 0; i < jobQueue.size(); i++) {
+                if (queue3.get(0) == jobQueue.get(i)) {
+                    jobQueue.get(i).setStatus(2);
+                    burstTime = jobQueue.get(i).getBurstTime();
+                    burstTime++;
+                    jobQueue.get(i).setBurstTime(burstTime);
                 } else if (jobQueue.get(i).getStatus() != "Waiting") {
                     jobQueue.get(i).setStatus(1);
                 }
@@ -137,31 +129,59 @@ public class Controller {
     public void removeQueue(int clock) {
         try {
             for (int i = 0; i < jobQueue.size(); i++) {
-                if (jobQueue.get(i).getStatus() == "Running") {
-                    jobQueue.get(i).setStatus(4);
-                    terminateQueue.add(jobQueue.get(i));
-                    if (jobQueue.get(i) == queue1.get(0)) {
-                        queue1.remove(0);
+                if (!queue1.isEmpty()) {
+                    if (queue1.get(0).getStatus() == "Running") {
+                        if (jobQueue.get(i) == queue1.get(0)) {
+                            jobQueue.get(i).setStatus(4);
+                            jobQueue.get(i).setTurnaroundTime(clock);
+                            avgTurnaroundTime(jobQueue.get(i).getTurnaroundTime());
+                            avgWaitingTime(jobQueue.get(i).getWaitingTime());
+                            terminateQueue.add(jobQueue.get(i));
+                            queue1.remove(0);
+                            jobQueue.remove(i);
+                        }
                     }
-                    else if (jobQueue.get(i) == queue2.get(0)) {
-                        queue2.remove(0);
+                }
+                if (!queue2.isEmpty()) {
+                    if (queue2.get(0).getStatus() == "Running") {
+                        if (jobQueue.get(i) == queue2.get(0)) {
+                            jobQueue.get(i).setStatus(4);
+                            jobQueue.get(i).setTurnaroundTime(clock);
+                            avgTurnaroundTime(jobQueue.get(i).getTurnaroundTime());
+                            avgWaitingTime(jobQueue.get(i).getWaitingTime());
+                            terminateQueue.add(jobQueue.get(i));
+                            queue2.remove(0);
+                            jobQueue.remove(i);
+                        }
                     }
-                    else if (jobQueue.get(i) == queue3.get(0)) {
-                        queue3.remove(0);
+                }
+                if (!queue3.isEmpty()) {
+
+                    if (queue3.get(0).getStatus() == "Running") {
+                        if (jobQueue.get(i) == queue3.get(0)) {
+                            jobQueue.get(i).setStatus(4);
+                            jobQueue.get(i).setTurnaroundTime(clock);
+                            avgTurnaroundTime(jobQueue.get(i).getTurnaroundTime());
+                            avgWaitingTime(jobQueue.get(i).getWaitingTime());
+                            terminateQueue.add(jobQueue.get(i));
+                            queue3.remove(0);
+                            jobQueue.remove(i);
+                        }
                     }
-                    jobQueue.remove(i);
                 }
             }
+
         } catch (java.lang.IndexOutOfBoundsException e) {
 
         }
     }
+
     public void waitingTime() {
-        for (int i = 0; i < jobQueue.size(); i++) { //Loop ถ้า i = 0 เช็คว่า i < jobQueue.size ก็จะเพื่มค่า i ครั้งละ 1
-            if (jobQueue.get(i).getStatus() == "Ready") {  // ถ้า jobQueue ตําแหน่งที่ i เท่ากับ "Ready"
-                waitingTime = jobQueue.get(i).getWaitingTime();  //โดย get ค่า waitingTime มาใช้งาน
-                waitingTime++; //เพิ่มค่า waitingTime ขึ้นทีละ 1
-                jobQueue.get(i).setWaitingTime(waitingTime);//โดยนําค่า waitingTime มาเก็บยัง setBurstTime ของ Process นั้น
+        for (int i = 0; i < jobQueue.size(); i++) {
+            if (jobQueue.get(i).getStatus() == "Ready") {
+                waitingTime = jobQueue.get(i).getWaitingTime();
+                waitingTime++;
+                jobQueue.get(i).setWaitingTime(waitingTime);
 
             }
         }
@@ -200,63 +220,76 @@ public class Controller {
         }
     }
 
-    //Method Add Process ไปยัง monitorQueue มาจาก roundRobinQueue หรือ firstComeFirstServedQueue
-    public void addMonitorQueue() {
+    public void addCdQueue() {
         try {
-
+            if (!queue1.isEmpty()) {
+                for (int i = 0; i < queue1.size(); i++) {
+                    if (queue1.get(i).getStatus() == "Running") {
+                        queue1.get(i).setStatus(3);
+                        cdQueue.add(queue1.get(i));
+                        queue1.remove(i);
+                        break;
+                    }
+                }
+            }
+            if (!queue2.isEmpty()) {
+                for (int i = 0; i < queue2.size(); i++) {
+                    if (queue2.get(i).getStatus() == "Running") {
+                        queue2.get(i).setStatus(3);
+                        cdQueue.add(queue2.get(i));
+                        queue2.remove(i);
+                        break;
+                    }
+                }
+            }
+            if (!queue3.isEmpty()) {
+                for (int i = 0; i < queue3.size(); i++) {
+                    if (queue3.get(i).getStatus() == "Running") {
+                        queue3.get(i).setStatus(3);
+                        cdQueue.add(queue3.get(i));
+                        queue3.remove(i);
+                        break;
+                    }
+                }
+            }
         } catch (java.lang.IndexOutOfBoundsException e) {
 
         }
     }
 
-    //Method End MonitorQueue กลับไปยัง roundRobinQueue หรือ firstComeFirstServedQueue
     public void endCdQueue() {
         try {
-
+            if (cdQueue.get(0).getQueue() == 1) {
+                cdQueue.get(0).setStatus(1);
+                queue1.add(cdQueue.get(0));
+                cdQueue.remove(0);
+            } else if (cdQueue.get(0).getQueue() == 2) {
+                cdQueue.get(0).setStatus(1);
+                queue2.add(cdQueue.get(0));
+                cdQueue.remove(0);
+            } else {
+                cdQueue.get(0).setStatus(1);
+                queue3.add(cdQueue.get(0));
+                cdQueue.remove(0);
+            }
         } catch (java.lang.IndexOutOfBoundsException e) {
 
         }
     }
 
     public void waitingTimeCdQueue() {
-        for (int i = 1; i < cdQueue.size(); i++) { //Loop ถ้า i = 1 เช็คว่า i < monitorQueue.size ก็จะเพื่มค่า i ครั้งละ 1
-            if (cdQueue.get(i).getStatus() == "Waiting") {  // ถ้า monitorQueue ตําแหน่งที่ i เท่ากับ "Waiting"
-                waitingTime = cdQueue.get(i).getWaitingTime();  //โดย get ค่า waitingTime มาใช้งาน
-                waitingTime++; //เพิ่มค่า waitingTime ขึ้นทีละ 1
-                cdQueue.get(i).setWaitingTime(waitingTime);//โดยนําค่า waitingTime มาเก็บยัง setBurstTime ของ Process นั้น
+        for (int i = 1; i < cdQueue.size(); i++) {
+            if (cdQueue.get(i).getStatus() == "Waiting") {
+                waitingTime = cdQueue.get(i).getWaitingTime();
+                waitingTime++;
+                cdQueue.get(i).setWaitingTime(waitingTime);
 
             }
         }
     }
 
     ////////////////////////////////////////Show////////////////////////////////////////////////////////////////////////////
-    //Method สำหรับ set ค่าเริ่มต้นให้กับ index ฝั่ง view
-//    public int setIndexRr() {
-//        int index = 0;
-//        if (!roundRobinQueue.isEmpty())
-//            if (roundRobinQueue.get(0).getStatus() == "Running") {
-//                index = 1;
-//            } else {
-//                index = 0;
-//            }
-//
-//        return index;
-//    }
 
-//    public int setIndexFcfs() {
-//        int index = 0;
-//        if (!firstComeFirstServedQueue.isEmpty()) {
-//            if (firstComeFirstServedQueue.get(0).getStatus() == "Running") {
-//                index = 1;
-//            } else {
-//                index = 0;
-//            }
-//        }
-//        return index;
-//    }
-
-    //Method showJobQueue  จะทำการเอาค่าตัวแปรมาเก็บไว้ในตัวแปรที่ชื่อว่า text แล้วจะนำไปเรียกใช้ที่ฝั่ง View
-    //Method ที่ชื่อว่า Show โดยทั้งหมดแล้วจะถูกเรียกใช้ที่ฝั่ง View เหมือนกัน
     public String showJobQueue() {
         String text = "";
         for (int index = 0; index < jobQueue.size(); index++) {
@@ -307,69 +340,23 @@ public class Controller {
         for (int index = 0; index < terminateQueue.size(); index++) {
             text = text + terminateQueue.get(index).getProcessID() + " ";
             text = text + terminateQueue.get(index).getStatus() + " ";
-            text = text + terminateQueue.get(index).getWaitingTime() + " ";
             text = text + terminateQueue.get(index).getTurnaroundTime() + " ";
+            text = text + terminateQueue.get(index).getWaitingTime() + " ";
             text = text + ",";
         }
         return text;
     }
-//
-//    public String showCPU() {
-//        String text = "";
-//        for (int index = 0; index < jobQueue.size(); index++) {
-//            if (jobQueue.get(index).getStatus() == "Running") {
-//                text = text + jobQueue.get(index).getProcessID() + " ";
-//                text = text + jobQueue.get(index).getStatus() + " ";
-//                text = text + (jobQueue.get(index).getCountPercent() + 1) + " ";
-//                text = text + ",";
-//            }
-//
-//        }
-//        return text;
-//    }
-//
-//    public String showMonitor() {
-//        String text = "";
-//        for (int index = 0; index < monitorQueue.size(); index++) {
-//            text = text + monitorQueue.get(0).getProcessID() + " ";
-//            text = text + monitorQueue.get(0).getStatus() + " ";
-//            text = text + monitorQueue.get(0).getIoTime() + " ";
-//            text = text + ",";
-//        }
-//        return text;
-//    }
-//
-//    public String showMonitorQueue() {
-//        String text = "";
-//        for (int index = 0; index < monitorQueue.size(); index++) {
-//            text = text + monitorQueue.get(index).getProcessID() + " ";
-//            text = text + monitorQueue.get(index).getStatus() + " ";
-//            text = text + monitorQueue.get(index).getWaitingTime() + " ";
-//            text = text + ",";
-//        }
-//        return text;
-//    }
-//
-//    public String showUsb() {
-//        String text = "";
-//        for (int index = 0; index < usbQueue.size(); index++) {
-//            text = text + usbQueue.get(0).getProcessID() + " ";
-//            text = text + usbQueue.get(0).getStatus() + " ";
-//            text = text + usbQueue.get(0).getIoTime() + " ";
-//            text = text + ",";
-//        }
-//        return text;
-//    }
-//
-//    public String showUsbQueue() {
-//        String text = "";
-//        for (int index = 0; index < usbQueue.size(); index++) {
-//            text = text + usbQueue.get(index).getProcessID() + " ";
-//            text = text + usbQueue.get(index).getStatus() + " ";
-//            text = text + usbQueue.get(index).getWaitingTime() + " ";
-//            text = text + ",";
-//        }
-//        return text;
-//    }
 
+
+    public String showCdQueue() {
+        String text = "";
+        for (int index = 0; index < cdQueue.size(); index++) {
+            text = text + cdQueue.get(index).getProcessID() + " ";
+            text = text + cdQueue.get(index).getStatus() + " ";
+            text = text + cdQueue.get(index).getIoTime() + " ";
+            text = text + cdQueue.get(index).getWaitingTime() + " ";
+            text = text + ",";
+        }
+        return text;
+    }
 }
